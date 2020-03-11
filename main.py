@@ -36,13 +36,16 @@ def download_image(url , folder = 'images/'):
         f.write(response)
     print(filename)
 
-def comments(soup):
+def download_comments(soup):
     comments = soup.find_all('div', {'class' :'texts'})
     for comment in comments:
         text = comment.find('span', {'class' :'black'}).text
         print(text)
 
-
+def download_genre(soup):
+    genres = soup.find('span', class_='d_book').find_all('a')
+    genre = [genre.text for genre in genres]
+    print(genre)
 
 
 
@@ -60,9 +63,9 @@ def main():
             book_author = header[1].strip()
             link_img_find = soup.find('div', {'class': 'bookimage'}).find('img')['src']
             book_url_find = f'/txt.php?id={number}'
-
             print('Заголовок: ',book_title)
-            comments(soup)
+            download_genre(soup)
+            #download_comments(soup)
             print(end='\n\n')
 
             # if soup.find('a', href=book_url_find):
