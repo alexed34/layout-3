@@ -26,6 +26,17 @@ def download_txt(url , filename , folder = 'books/'):
         f.write(response)
     return filepath
 
+def download_image(url , folder = 'images/'):
+    path = os.getcwd()
+    os.makedirs(os.path.join(path, folder), exist_ok=True)
+    filename = url.split('/')[-1]
+    filepath = os.path.join(folder, filename)
+    response = get_response(url).content
+    with open(filepath, 'wb') as f:
+        f.write(response)
+    print(filename)
+
+
 
 
 
@@ -40,12 +51,14 @@ def main():
             header = header.split('::')
             book_title = header[0].strip()
             book_author = header[1].strip()
-            link_img = soup.find('div', {'class': 'bookimage'}).find('img')['src']
+            link_img_find = soup.find('div', {'class': 'bookimage'}).find('img')['src']
             book_url_find = f'/txt.php?id={number}'
             if soup.find('a', href=book_url_find):
-                print('Заголовок: ', book_title)
-                print(urljoin('http://tululu.org', link_img), end='\n\n')
+                # print('Заголовок: ', book_title)
+                # print(urljoin('http://tululu.org', link_img_find), end='\n\n')
                 book_url = urljoin('http://tululu.org', book_url_find)
+                img_url = urljoin('http://tululu.org', link_img_find)
+                download_image(img_url)
                 # download_txt(book_url, book_title,)
 
 
