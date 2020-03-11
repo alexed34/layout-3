@@ -2,6 +2,7 @@ import requests
 import os
 from bs4 import BeautifulSoup
 from pathvalidate import sanitize_filename
+from urllib.parse import urljoin
 
 
 def get_response(url):
@@ -29,7 +30,7 @@ def download_txt(url , filename , folder = 'books/'):
 
 
 def main():
-    for number in range(1,3):
+    for number in range(1,11):
         url = f'http://tululu.org/b{number}/'
         response = get_response(url)
         if url == response.url:
@@ -39,10 +40,13 @@ def main():
             header = header.split('::')
             book_title = header[0].strip()
             book_author = header[1].strip()
+            link_img = soup.find('div', {'class': 'bookimage'}).find('img')['src']
             book_url_find = f'/txt.php?id={number}'
             if soup.find('a', href=book_url_find):
-                book_url = f'http://tululu.org{book_url_find}'
-                download_txt(book_url, book_title,)
+                print('Заголовок: ', book_title)
+                print(urljoin('http://tululu.org', link_img), end='\n\n')
+                book_url = urljoin('http://tululu.org', book_url_find)
+                # download_txt(book_url, book_title,)
 
 
 
