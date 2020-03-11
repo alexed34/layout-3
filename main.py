@@ -62,17 +62,19 @@ def main():
             book_title = header[0].strip()
             book_author = header[1].strip()
             link_img_find = soup.find('div', {'class': 'bookimage'}).find('img')['src']
-            book_url_find = f'/txt.php?id={number}'
+            img_url = urljoin('http://tululu.org', link_img_find)
+            book_url = urljoin('http://tululu.org', f'/txt.php?id={number}')
             print('Заголовок: ',book_title)
             download_genre(soup)
             #download_comments(soup)
             print(end='\n\n')
 
-            # if soup.find('a', href=book_url_find):
-            #     book_url = urljoin('http://tululu.org', book_url_find)
-            #     img_url = urljoin('http://tululu.org', link_img_find)
-                # download_image(img_url)
-                # download_txt(book_url, book_title,)
+
+            # download_image(img_url)
+            # download_txt(book_url, book_title,)
+
+            # if soup.find('a', href=book_url_find): если есть ссылка на скачивание книги
+
 
 
 
