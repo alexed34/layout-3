@@ -3,6 +3,8 @@ import os
 from bs4 import BeautifulSoup
 from pathvalidate import sanitize_filename
 from urllib.parse import urljoin
+import json
+
 
 
 def get_response(url):
@@ -21,10 +23,13 @@ def download_txt(url , filename , folder = 'books/'):
     os.makedirs(os.path.join(path, folder), exist_ok=True)
     filename = sanitize_filename(filename)
     filepath = os.path.join(folder, f'{filename}.txt')
-    response = get_response(url).text
-    with open(filepath, 'w') as f:
-        f.write(response)
-    return filepath
+    if url == get_response(url).url:
+        response = get_response(url).text
+        with open(filepath, 'w') as f:
+            f.write(response)
+        return filepath
+    else:
+        return 'Нет книги'
 
 def download_image(url , folder = 'images/'):
     path = os.getcwd()
@@ -34,46 +39,70 @@ def download_image(url , folder = 'images/'):
     response = get_response(url).content
     with open(filepath, 'wb') as f:
         f.write(response)
-    print(filename)
+    return filepath
 
 def download_comments(soup):
-    comments = soup.find_all('div', {'class' :'texts'})
-    for comment in comments:
-        text = comment.find('span', {'class' :'black'}).text
-        print(text)
+    comments_soup = soup.find_all('div', {'class' :'texts'})
+    comments = [comment.find('span', {'class' :'black'}).text for comment in comments_soup]
+    return comments
 
 def download_genre(soup):
-    genres = soup.find('span', class_='d_book').find_all('a')
-    genre = [genre.text for genre in genres]
-    print(genre)
+    genres_soup = soup.find('span', class_='d_book').find_all('a')
+    genres = [genre.text for genre in genres_soup]
+    return genres
 
+def page(number):
+    response = requests.get(f'http://tululu.org/l55/{number}/')
+    response.raise_for_status()
+    soup = BeautifulSoup(response.text, 'lxml')
+    text_cards = soup.find_all('table', class_='d_book')
+    for card in text_cards:
+        link = card.find('a')['href']
 
+        link = urljoin('http://tululu.org/', link)
+        print(link)
 
 
 def main():
-    for number in range(1,11):
-        url = f'http://tululu.org/b{number}/'
+    json_books = []
+    for number in range(1,5):
+        url = f'http://tululu.org/l55/{number}/'
         response = get_response(url)
-        if url == response.url:
-            response_text = response.text
+        soup = BeautifulSoup(response.text, 'lxml')
+        text_cards = soup.find_all('table', class_='d_book')
+        for card in text_cards:
+            link = card.find('a')['href']
+            link_book = urljoin('http://tululu.org/', link)
+            r = get_response(link_book)
+            response_text = r.text
             soup = BeautifulSoup(response_text, 'lxml')
             header = soup.find('div', id='content').find('h1').text
             header = header.split('::')
-            book_title = header[0].strip()
-            book_author = header[1].strip()
-            link_img_find = soup.find('div', {'class': 'bookimage'}).find('img')['src']
-            img_url = urljoin('http://tululu.org', link_img_find)
+            title = header[0].strip()
+            author = header[1].strip()
+            img_src_soup = soup.find('div', {'class': 'bookimage'}).find('img')['src']
+            img_url = urljoin('http://tululu.org', img_src_soup)
+            img_src = download_image(img_url)
             book_url = urljoin('http://tululu.org', f'/txt.php?id={number}')
-            print('Заголовок: ',book_title)
-            download_genre(soup)
-            #download_comments(soup)
-            print(end='\n\n')
+            book_path = download_txt(book_url, title)
+            comments = download_comments(soup)
+            genres = download_genre(soup)
+            data = {"title": title,
+                    "author": author,
+                    "img_src": img_src,
+                    "book_path": book_path,
+                    "comments": comments,
+                    "genres": genres
+                    }
+            json_books.append(data)
+
+    with open('data.json', 'w', encoding='utf8') as f:
+        json.dump(json_books, f, ensure_ascii=False)
 
 
-            # download_image(img_url)
-            # download_txt(book_url, book_title,)
 
-            # if soup.find('a', href=book_url_find): если есть ссылка на скачивание книги
+
+
 
 
 
