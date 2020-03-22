@@ -42,47 +42,43 @@ def download_image(url , folder = 'images/'):
     return filepath
 
 def download_comments(soup):
-    comments_soup = soup.find_all('div', {'class' :'texts'})
-    comments = [comment.find('span', {'class' :'black'}).text for comment in comments_soup]
+    select_text = 'div.texts'
+    comments_soup = soup.select(select_text)
+    select_comment = 'span.black'
+    comments = [comment.select_one(select_comment) .text for comment in comments_soup]
     return comments
 
 def download_genre(soup):
-    genres_soup = soup.find('span', class_='d_book').find_all('a')
+    select_genres = 'span.d_book a'
+    genres_soup = soup.select(select_genres)
     genres = [genre.text for genre in genres_soup]
     return genres
-
-def page(number):
-    response = requests.get(f'http://tululu.org/l55/{number}/')
-    response.raise_for_status()
-    soup = BeautifulSoup(response.text, 'lxml')
-    text_cards = soup.find_all('table', class_='d_book')
-    for card in text_cards:
-        link = card.find('a')['href']
-
-        link = urljoin('http://tululu.org/', link)
-        print(link)
 
 
 def main():
     json_books = []
-    for number in range(1,5):
+    for number in range(1,2):
         url = f'http://tululu.org/l55/{number}/'
         response = get_response(url)
         soup = BeautifulSoup(response.text, 'lxml')
-        text_cards = soup.find_all('table', class_='d_book')
+        select_links = 'table.d_book '
+        text_cards = soup.select(select_links)
         for card in text_cards:
-            link = card.find('a')['href']
+            link = card.select_one('a')['href']
             link_book = urljoin('http://tululu.org/', link)
             r = get_response(link_book)
             response_text = r.text
             soup = BeautifulSoup(response_text, 'lxml')
-            header = soup.find('div', id='content').find('h1').text
+            select_header = 'div#content h1'
+            header = soup.select_one(select_header).text
             header = header.split('::')
             title = header[0].strip()
             author = header[1].strip()
-            img_src_soup = soup.find('div', {'class': 'bookimage'}).find('img')['src']
+            select_img = 'div.bookimage img'
+            img_src_soup = soup.select_one(select_img)['src']
             img_url = urljoin('http://tululu.org', img_src_soup)
             img_src = download_image(img_url)
+            number = link.split('b')[1].strip('/')
             book_url = urljoin('http://tululu.org', f'/txt.php?id={number}')
             book_path = download_txt(book_url, title)
             comments = download_comments(soup)
@@ -95,20 +91,10 @@ def main():
                     "genres": genres
                     }
             json_books.append(data)
+            print(title)
 
     with open('data.json', 'w', encoding='utf8') as f:
         json.dump(json_books, f, ensure_ascii=False)
-
-
-
-
-
-
-
-
-
-
-
 
 
 
