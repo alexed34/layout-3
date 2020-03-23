@@ -7,7 +7,6 @@ import json
 import argparse
 
 
-
 def get_response(url):
     response = requests.get(url)
     response.raise_for_status()
@@ -18,10 +17,9 @@ def great_folder(path):
     os.makedirs(path, exist_ok=True)
 
 
-def download_txt(url , filename , path, folder = 'books'):
+def download_txt(url, filename, path, folder='books'):
     os.makedirs(os.path.join(path, folder), exist_ok=True)
     filename = sanitize_filename(filename)
-
     filepath = os.path.join(folder, f'{filename}.txt')
     if url == get_response(url).url:
         response = get_response(url).text
@@ -31,7 +29,8 @@ def download_txt(url , filename , path, folder = 'books'):
     else:
         return 'Нет книги'
 
-def download_image(url, path, folder = 'images'):
+
+def download_image(url, path, folder='images'):
     os.makedirs(os.path.join(path, folder), exist_ok=True)
     filename = url.split('/')[-1]
     filepath = os.path.join(os.path.join(path, folder), filename)
@@ -40,12 +39,14 @@ def download_image(url, path, folder = 'images'):
         f.write(response)
     return filepath
 
+
 def download_comments(soup):
     select_text = 'div.texts'
     comments_soup = soup.select(select_text)
     select_comment = 'span.black'
-    comments = [comment.select_one(select_comment) .text for comment in comments_soup]
+    comments = [comment.select_one(select_comment).text for comment in comments_soup]
     return comments
+
 
 def download_genre(soup):
     select_genres = 'span.d_book a'
@@ -53,7 +54,8 @@ def download_genre(soup):
     genres = [genre.text for genre in genres_soup]
     return genres
 
-def createParser ():
+
+def createParser():
     parser = argparse.ArgumentParser()
     parser.add_argument('-sp', '--start_page', type=int)
     parser.add_argument('-ep', '--end_page', type=int, default=702)
@@ -64,9 +66,8 @@ def createParser ():
     return parser
 
 
-
 def main():
-    json_books = []
+    json_data = []
     parser = createParser()
     namespace = parser.parse_args()
     great_folder(namespace.dest_folder)
@@ -89,16 +90,16 @@ def main():
             header = header.split('::')
             title = header[0].strip()
             author = header[1].strip()
-            select_img = 'div.bookimage img'
-            img_src_soup = soup.select_one(select_img)['src']
-            img_url = urljoin('http://tululu.org', img_src_soup)
             if not namespace.skip_imgs:
+                select_img = 'div.bookimage img'
+                img_src_soup = soup.select_one(select_img)['src']
+                img_url = urljoin('http://tululu.org', img_src_soup)
                 img_src = download_image(img_url, path)
             else:
                 img_src = 'not downloaded'
-            number = link.split('b')[1].strip('/')
-            book_url = urljoin('http://tululu.org', f'/txt.php?id={number}')
             if not namespace.skip_txt:
+                number = link.split('b')[1].strip('/')
+                book_url = urljoin('http://tululu.org', f'/txt.php?id={number}')
                 book_path = download_txt(book_url, title, path)
             else:
                 book_path = 'not downloaded'
@@ -111,14 +112,13 @@ def main():
                     "comments": comments,
                     "genres": genres
                     }
-            json_books.append(data)
+            json_data.append(data)
     if namespace.json_path:
         great_folder(namespace.json_path)
         path = namespace.json_path
 
     with open(os.path.join(path, 'data.json'), 'w', encoding='utf8') as f:
-        json.dump(json_books, f, ensure_ascii=False)
-
+        json.dump(json_data, f, ensure_ascii=False)
 
 
 if __name__ == '__main__':
