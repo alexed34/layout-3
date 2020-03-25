@@ -13,7 +13,7 @@ def get_response(url):
     return response
 
 
-def great_folder(path):
+def create_folder(path):
     os.makedirs(path, exist_ok=True)
 
 
@@ -21,13 +21,13 @@ def download_txt(url, filename, path, folder='books'):
     os.makedirs(os.path.join(path, folder), exist_ok=True)
     filename = sanitize_filename(filename)
     filepath = os.path.join(folder, f'{filename}.txt')
-    if url == get_response(url).url:
-        response = get_response(url).text
+    r = get_response(url)
+    if url == r.url:
+        response = r.text
         with open(os.path.join(path, filepath), 'w', encoding='utf-8') as f:
             f.write(response)
         return filepath
-    else:
-        return 'Нет книги'
+
 
 
 def download_image(url, path, folder='images'):
@@ -55,10 +55,11 @@ def download_genre(soup):
     return genres
 
 
-def createParser():
+def create_parser():
     parser = argparse.ArgumentParser()
     parser.add_argument('-sp', '--start_page', type=int)
-    parser.add_argument('-ep', '--end_page', type=int, default=702)
+    end_pages = 702
+    parser.add_argument('-ep', '--end_page', type=int, default=end_pages)
     parser.add_argument('-df', '--dest_folder', default='D:\\books')
     parser.add_argument('-si', '--skip_imgs', action='store_const', const=True)
     parser.add_argument('-st', '--skip_txt', action='store_const', const=True)
@@ -68,20 +69,21 @@ def createParser():
 
 def main():
     json_data = []
-    parser = createParser()
+    parser = create_parser()
     namespace = parser.parse_args()
-    great_folder(namespace.dest_folder)
+    create_folder(namespace.dest_folder)
     path = namespace.dest_folder
 
-    for number in range(namespace.start_page, namespace.end_page):
+    #for number in range(namespace.start_page, namespace.end_page):
+    for number in range(1, 2):
         url = f'http://tululu.org/l55/{number}/'
         response = get_response(url)
         soup = BeautifulSoup(response.text, 'lxml')
         select_books = 'table.d_book '
         text_cards = soup.select(select_books)
-        for card in text_cards:
-            link = card.select_one('a')['href']
-            link_book = urljoin('http://tululu.org/', link)
+        for card in text_cards[:2]:
+            link = card.select_one('a')['href'].strip('/')
+            link_book = urljoin('http://tululu.org', link)
             r = get_response(link_book)
             response_text = r.text
             soup = BeautifulSoup(response_text, 'lxml')
@@ -92,27 +94,29 @@ def main():
             author = header[1].strip()
             if not namespace.skip_imgs:
                 select_img = 'div.bookimage img'
-                img_src_soup = soup.select_one(select_img)['src']
+                img_src_soup = soup.select_one(select_img)['src'].strip('/')
                 img_url = urljoin('http://tululu.org', img_src_soup)
                 img_src = download_image(img_url, path)
             else:
-                img_src = 'not downloaded'
+                img_src = None
             if not namespace.skip_txt:
-                number = link.split('b')[1].strip('/')
+                number = link.split('b')[1]
                 book_url = urljoin('http://tululu.org', f'/txt.php?id={number}')
                 book_path = download_txt(book_url, title, path)
             else:
-                book_path = 'not downloaded'
+                book_path = None
             comments = download_comments(soup)
             genres = download_genre(soup)
-            data = {"title": title,
-                    "author": author,
-                    "img_src": img_src,
-                    "book_path": book_path,
-                    "comments": comments,
-                    "genres": genres
-                    }
+            data = {
+                "title": title,
+                "author": author,
+                "img_src": img_src,
+                "book_path": book_path,
+                "comments": comments,
+                "genres": genres,
+            }
             json_data.append(data)
+            print(title)
     if namespace.json_path:
         great_folder(namespace.json_path)
         path = namespace.json_path
