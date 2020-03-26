@@ -5,6 +5,8 @@ from pathvalidate import sanitize_filename
 from urllib.parse import urljoin
 import json
 import argparse
+import time
+import progressbar
 
 
 def get_response(url):
@@ -20,7 +22,7 @@ def create_folder(path):
 def download_txt(url, filename, path, folder='books'):
     os.makedirs(os.path.join(path, folder), exist_ok=True)
     filename = sanitize_filename(filename)
-    filepath = os.path.join(folder, f'{filename}.txt')
+    filepath = os.path.join(os.path.join(path, folder), f'{filename}.txt')
     r = get_response(url)
     if url == r.url:
         response = r.text
@@ -41,16 +43,13 @@ def download_image(url, path, folder='images'):
 
 
 def download_comments(soup):
-    select_text = 'div.texts'
-    comments_soup = soup.select(select_text)
-    select_comment = 'span.black'
-    comments = [comment.select_one(select_comment).text for comment in comments_soup]
+    comments_soup = soup.select('div.texts')
+    comments = [comment.select_one('span.black').text for comment in comments_soup]
     return comments
 
 
 def download_genre(soup):
-    select_genres = 'span.d_book a'
-    genres_soup = soup.select(select_genres)
+    genres_soup = soup.select('span.d_book a')
     genres = [genre.text for genre in genres_soup]
     return genres
 
@@ -74,37 +73,32 @@ def main():
     create_folder(namespace.dest_folder)
     path = namespace.dest_folder
 
-    #for number in range(namespace.start_page, namespace.end_page):
-    for number in range(1, 2):
+    for number in range(namespace.start_page, namespace.end_page):
         url = f'http://tululu.org/l55/{number}/'
         response = get_response(url)
         soup = BeautifulSoup(response.text, 'lxml')
-        select_books = 'table.d_book '
-        text_cards = soup.select(select_books)
-        for card in text_cards[:2]:
-            link = card.select_one('a')['href'].strip('/')
-            link_book = urljoin('http://tululu.org', link)
+        text_cards = soup.select('table.d_book')
+        for card in text_cards:
+            base_url = response.url
+            link = card.select_one('a')['href']
+            link_book = urljoin(base_url, link)
             r = get_response(link_book)
             response_text = r.text
             soup = BeautifulSoup(response_text, 'lxml')
-            select_header = 'div#content h1'
-            header = soup.select_one(select_header).text
+            header = soup.select_one('div#content h1').text
             header = header.split('::')
             title = header[0].strip()
             author = header[1].strip()
+            img_src = None
             if not namespace.skip_imgs:
-                select_img = 'div.bookimage img'
-                img_src_soup = soup.select_one(select_img)['src'].strip('/')
-                img_url = urljoin('http://tululu.org', img_src_soup)
+                img_src_soup = soup.select_one('div.bookimage img')['src']
+                img_url = urljoin(base_url, img_src_soup)
                 img_src = download_image(img_url, path)
-            else:
-                img_src = None
+            book_path = None
             if not namespace.skip_txt:
                 number = link.split('b')[1]
                 book_url = urljoin('http://tululu.org', f'/txt.php?id={number}')
                 book_path = download_txt(book_url, title, path)
-            else:
-                book_path = None
             comments = download_comments(soup)
             genres = download_genre(soup)
             data = {
@@ -116,13 +110,17 @@ def main():
                 "genres": genres,
             }
             json_data.append(data)
-            print(title)
+
+
     if namespace.json_path:
         great_folder(namespace.json_path)
         path = namespace.json_path
 
     with open(os.path.join(path, 'data.json'), 'w', encoding='utf8') as f:
         json.dump(json_data, f, ensure_ascii=False)
+
+
+
 
 
 if __name__ == '__main__':
