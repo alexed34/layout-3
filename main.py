@@ -15,10 +15,6 @@ def get_response(url):
     return response
 
 
-def create_folder(path):
-    os.makedirs(path, exist_ok=True)
-
-
 def download_txt(url, filename, path, folder='books'):
     os.makedirs(os.path.join(path, folder), exist_ok=True)
     filename = sanitize_filename(filename)
@@ -29,7 +25,6 @@ def download_txt(url, filename, path, folder='books'):
         with open(os.path.join(path, filepath), 'w', encoding='utf-8') as f:
             f.write(response)
         return filepath
-
 
 
 def download_image(url, path, folder='images'):
@@ -70,7 +65,7 @@ def main():
     json_data = []
     parser = create_parser()
     namespace = parser.parse_args()
-    create_folder(namespace.dest_folder)
+    os.makedirs(namespace.dest_folder, exist_ok=True)
     path = namespace.dest_folder
 
     for number in range(namespace.start_page, namespace.end_page):
@@ -111,16 +106,12 @@ def main():
             }
             json_data.append(data)
 
-
     if namespace.json_path:
         great_folder(namespace.json_path)
         path = namespace.json_path
 
     with open(os.path.join(path, 'data.json'), 'w', encoding='utf8') as f:
         json.dump(json_data, f, ensure_ascii=False)
-
-
-
 
 
 if __name__ == '__main__':
